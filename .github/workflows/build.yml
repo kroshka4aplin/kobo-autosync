@@ -1,0 +1,40 @@
+name: Build and package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NICKELTC_IMAGE: ghcr.io/pgaskin/nickeltc@sha256:3296eb400d270cfd26f5773ab09625d4469f85680b3a191951dfb78d8ade7840
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Host policy regression tests
+        run: |
+          g++ -std=c++11 -Wall -Wextra -Werror tests/policy_test.cc -o /tmp/kobo-policy-test
+          /tmp/kobo-policy-test
+      - name: Pull pinned NickelTC toolchain
+        run: docker pull "$NICKELTC_IMAGE"
+      - name: Clean ARM build
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp --mount "type=bind,src=$PWD,dst=/work" --workdir /work \
+            "$NICKELTC_IMAGE" sh -c 'make clean && make -j2 all && make koboroot'
+      - name: Package and verify distributions
+        run: python3 package.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: kobo-autosync-experimental
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

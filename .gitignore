@@ -1,0 +1,33 @@
+# Build outputs and local installer layout
+*.o
+*.moc
+*.so
+*.tgz
+*.zip
+/dist/
+/.adds/
+/.kobo/
+/build-info.json
+/NickelHook-LICENSE.txt
+/vendor/NickelHook/nhplugin.json
+__pycache__/
+*.pyc
+# Local tooling and private device data
+/.agents/
+/.codex/
+/.aws/
+.env
+.env.*
+*.log
+*.log.*
+*.sqlite
+*.sqlite3
+*.db
+*.epub
+*.kepub
+*.pdf
+/firmware/
+/backups/
+/compile_commands.json
+/.vscode/
+/.idea/

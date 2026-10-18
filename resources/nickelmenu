@@ -1,0 +1,6 @@
+menu_item :main :Daily Sync - sync now :cmd_spawn :quiet :touch /mnt/onboard/.adds/daily-sync/sync-now
+menu_item :main :Daily Sync - pause :cmd_spawn :quiet :touch /mnt/onboard/.adds/daily-sync/paused
+menu_item :main :Daily Sync - resume :cmd_spawn :quiet :rm -f /mnt/onboard/.adds/daily-sync/paused
+menu_item :reader :Daily Sync - sync now :cmd_spawn :quiet :touch /mnt/onboard/.adds/daily-sync/sync-now
+menu_item :reader :Daily Sync - pause :cmd_spawn :quiet :touch /mnt/onboard/.adds/daily-sync/paused
+menu_item :reader :Daily Sync - resume :cmd_spawn :quiet :rm -f /mnt/onboard/.adds/daily-sync/paused
