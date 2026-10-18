@@ -3,5 +3,6 @@
   "official_firmware_url": "https://ereaderfiles.kobo.com/firmwares/kobo7/Sep2026/kobo-update-4.38.23828.zip",
   "libnickel_sha256": "6bfde638eb7f188855701b1a5815322a6f9dadd775bf52e9c8b7752280ac66c1",
   "physical_device_test": "Forma 4.38.23828: v0.1.1 full sync and same-day skip logged; Wi-Fi shutdown confirmed by user. v0.1.2 native manual request accepted while enabled, server request received, UI completed without error and Wi-Fi shut down with no expected updates; plugin logged UNCONFIRMED/FAILED because full-success timestamp was absent. Successful full-sync accounting for this manual attempt is not confirmed.",
+  "follow_up_device_check": "2026-10-18, Forma 4.38.23828, v0.1.2: subsequent wakes logged ALREADY_DONE, preserving the earlier confirmed daily success. Enabled=true, no paused marker, stock PeriodicAutoSync=false, own NickelMenu file matches the repository, no pending installer or command markers. No device changes were needed. The manual-attempt success-accounting limitation remains unresolved.",
   "battery_savings": "not measured"
 }

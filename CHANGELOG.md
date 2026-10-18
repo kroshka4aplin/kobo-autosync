@@ -12,6 +12,9 @@ Forma test: native manual request accepted after the daily quota; server receive
 it, UI completed without an error, Wi-Fi shutdown confirmed by user. No updates
 were expected. The plugin logged UNCONFIRMED/FAILED (no full-success timestamp);
 success accounting for this attempt remains unresolved.
+Subsequent 0.1.2 wakes logged ALREADY_DONE using the earlier confirmed daily success.
+On-device configuration checked: automation enabled, stock daily sync disabled,
+NickelMenu entries match the release, no pending installer or command markers.
 
 ## 0.1.1-experimental — 2026-10-18
 

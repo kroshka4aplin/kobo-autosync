@@ -21,6 +21,9 @@ shutdown. There were no expected updates in that test. The plugin still logged
 `UNCONFIRMED`/`FAILED` because Kobo did not update its full-success timestamp.
 **Manual access and shutdown are confirmed; success accounting for that attempt
 remains unresolved.** These messages alone do not establish an exchange failure.
+Subsequent wakes on 0.1.2 logged `ALREADY_DONE`, retaining the day's earlier
+confirmed success. The on-device configuration was checked: automation enabled,
+stock daily sync disabled, no pending installer or pause marker.
 Host policy tests, the ARM build and exact-firmware ABI checks also pass.
 Battery savings have not been measured. Keep a backup before trying it.
 
@@ -29,7 +32,8 @@ Battery savings have not been measured. Keep a backup before trying it.
 - At the first wake (or startup) each day, connect to a saved Wi-Fi network and
   request the reader's native full sync. No scheduled wake from sleep is needed.
 - Record success only after native start, full-sync success and completion signals.
-  A failed attempt is retried at the next wake, with bounded connection/sync timeouts.
+  A failed or unconfirmed attempt is retried at the next wake if today's success
+  has not already been recorded, with bounded connection/sync timeouts.
 - Turn Wi-Fi off afterward and block it outside a daily or explicit manual sync.
   **The stock Kobo “Sync now” button works even after today's automatic sync.**
   A manual attempt keeps its connection until completion or timeout, then turns Wi-Fi off.
@@ -39,7 +43,8 @@ Battery savings have not been measured. Keep a backup before trying it.
 - Start every installation and update **paused**, so activation is an explicit step.
 
 One daily sync can produce many HTTP requests and can overlap with connection-time
-requests initiated by Kobo. This is not a one-request-per-day limiter.
+requests initiated by Kobo. Failed or unconfirmed attempts can run more than once
+in a day. This is not a one-request-per-day limiter.
 
 ## Install
 
