@@ -46,11 +46,9 @@ static bool writeText(const QString &name, const QString &value) {
 
 DailySync::DailySync(QObject *parent) : QObject(parent) {
     wakeTimer.setSingleShot(true);
-    guardTimer.setSingleShot(true);
     workTimer.setInterval(1000); // Runs only during an attempt; never wakes a sleeping device.
     connect(&wakeTimer, SIGNAL(timeout()), this, SLOT(evaluate()));
     connect(&workTimer, SIGNAL(timeout()), this, SLOT(drive()));
-    connect(&guardTimer, SIGNAL(timeout()), this, SLOT(guardWifi()));
     connect(&watcher, SIGNAL(directoryChanged(QString)), this, SLOT(filesChanged()));
 }
 DailySync::~DailySync() { if (controller == this) controller = nullptr; }
@@ -95,6 +93,7 @@ void DailySync::bootstrap() {
     ok &= bool(connect(power, SIGNAL(aboutToSleep()), this, SLOT(sleeping())));
     ok &= bool(connect(syncManager, SIGNAL(finished()), this, SLOT(finished())));
     ok &= bool(connect(syncManager, SIGNAL(syncStarted(SyncState::SyncType)), this, SLOT(started())));
+    ok &= bool(connect(syncManager, SIGNAL(downloadStarted(Volume)), this, SLOT(downloadStarted())));
     ok &= bool(connect(syncManager, SIGNAL(cancelStarted()), this, SLOT(cancelled())));
     ok &= bool(connect(wireless, SIGNAL(wifiEnabled(bool)), this, SLOT(wifiChanged(bool))));
     ok &= bool(connect(wireless, SIGNAL(networkFailedToConnect()), this, SLOT(connectingFailed())));
@@ -112,7 +111,7 @@ void DailySync::bootstrap() {
     usb = usbVisible(plug);
     awake = !isSleeping(power);
     watcher.addPath(QString::fromLatin1(ROOT));
-    status("READY v0.1.2: daily automatic sync; explicit manual sync allowed");
+    status("READY v0.1.3: daily sync; manual Wi-Fi and book downloads allowed until sleep");
     if (awake) woke();
 }
 void DailySync::woke() {
@@ -122,17 +121,22 @@ void DailySync::woke() {
 }
 void DailySync::sleeping() {
     awake = false;
-    wakeTimer.stop(); guardTimer.stop();
+    wakeTimer.stop();
+    wifiPolicy.reset();
+    // Sleep ends the user network session. An active attempt still gets bounded
+    // cancellation/cleanup before shutdown, including a paused explicit request.
+    if (policy.active()) wifiPolicy.owned = true;
     if (policy.active()) beginCancel("sleep requested");
     else if (managed()) disableWifi();
 }
 void DailySync::usbConnected() {
     nh_log("USB_EXPORT: stopping automation timers, phase=%d; no onboard writes until unplug", int(policy.phase));
     usb = true;
-    wakeTimer.stop(); workTimer.stop(); guardTimer.stop();
+    wakeTimer.stop(); workTimer.stop();
     if (!watcher.directories().isEmpty()) watcher.removePaths(watcher.directories());
     // Nickel owns USB entry/cancellation. Never write onboard state during USB export.
     policy.reset(); forced = false;
+    wifiPolicy.reset();
 }
 void DailySync::usbDisconnected() {
     usb = false;
@@ -144,6 +148,7 @@ void DailySync::filesChanged() {
     if (enabled != wasManaged) {
         wasManaged = enabled;
         status(enabled ? "RESUMED: automation enabled" : "PAUSED: manual Wi-Fi allowed");
+        if (!enabled) wifiPolicy.allowManual();
         if (enabled && awake) woke();
     }
     if (QFileInfo(path("sync-now")).exists()) {
@@ -166,13 +171,13 @@ void DailySync::evaluate() {
     if (today.year() < 2024) { status("SKIPPED: device clock is not set"); return; }
     QString last = readText(path("last-success.txt")).left(10);
     if (!SyncPolicy::due(today.toString(Qt::ISODate).toStdString(), last.toStdString(), forced)) {
-        status("ALREADY_DONE: keeping Wi-Fi off");
-        guardTimer.start(100);
+        status("ALREADY_DONE: automatic sync skipped; manual Wi-Fi unchanged");
         return;
     }
     bool manual = forced;
     forced = false;
     policy.begin(manual ? SyncPolicy::MenuRequest : SyncPolicy::DailyWake);
+    wifiPolicy.begin(false, !airplane(workflow) || wirelessUp(wireless));
     deadline = QDateTime::currentDateTime().addSecs(option("ConnectTimeoutSeconds", 60, 15, 180));
     nextProgress = QDateTime::currentDateTime().addSecs(10);
     status(manual ? "CONNECTING: explicit manual full sync requested"
@@ -222,15 +227,29 @@ void DailySync::drive() {
 }
 void DailySync::manualRequested() {
     // This is called by Nickel's explicit manual-sync event, before its connection
-    // workflow. Never grant an exception for unrelated background syncStarted signals.
-    if (!usable() || !managed() || !policy.begin(SyncPolicy::NativeRequest)) return;
+    // workflow. User requests keep their network session after sync completion.
+    if (!usable() || (!managed() && !policy.active())) return;
+    wifiPolicy.allowManual();
+    if (policy.active()) {
+        status("MANUAL_REQUEST: existing attempt keeps Wi-Fi available until sleep");
+        return;
+    }
+    if (!managed() || !policy.begin(SyncPolicy::NativeRequest)) return;
+    wifiPolicy.begin(true, true);
     forced = false;
-    wakeTimer.stop(); guardTimer.stop();
+    wakeTimer.stop();
     deadline = QDateTime::currentDateTime().addSecs(option("ConnectTimeoutSeconds", 60, 15, 180));
     nextProgress = QDateTime::currentDateTime().addSecs(10);
     workTimer.start();
-    status("MANUAL_REQUEST: native Kobo sync allowed; Wi-Fi will be disabled after completion");
+    status("MANUAL_REQUEST: native Kobo sync allowed; Wi-Fi remains available until sleep");
     // Do not call startSync here: Nickel will run the original request itself.
+}
+void DailySync::downloadStarted() {
+    if (!usable() || (!managed() && !policy.active())) return;
+    // Sync completion is not download completion. Relinquish network ownership
+    // before content transfer, even when it started inside our automatic attempt.
+    wifiPolicy.allowManual();
+    status("DOWNLOAD_STARTED: Wi-Fi left to Nickel until sleep; no content details logged");
 }
 void DailySync::started() {
     if (usb || policy.phase != SyncPolicy::Requested) return;
@@ -267,6 +286,14 @@ void DailySync::connectingFailed() {
 }
 void DailySync::beginCancel(const QString &reason) {
     if (usb || !policy.active() || policy.phase == SyncPolicy::Cancelling) return;
+    if (!wifiPolicy.cancelNativeOnTimeout(awake)) {
+        // A tracking deadline must not cancel an ongoing user download or sync.
+        // Stop monitoring without declaring success or taking their network down.
+        policy.completed = false;
+        status("TRACKING_STOPPED: " + reason + "; manual Wi-Fi unchanged");
+        settle();
+        return;
+    }
     policy.cancel();
     deadline = QDateTime::currentDateTime().addSecs(15);
     status("RETRY_NEXT_WAKE: " + reason);
@@ -278,14 +305,19 @@ void DailySync::writeSuccess() {
 }
 void DailySync::settle() {
     bool success = policy.completed;
+    bool closeWifi = wifiPolicy.closeAfterAttempt();
     workTimer.stop();
     // Set Idle first so a synchronous wifiEnabled callback cannot restart this attempt.
     policy.reset();
-    disableWifi();
+    wifiPolicy.finished();
+    if (closeWifi) disableWifi();
     if (success) writeSuccess();
-    status(success ? "DONE: full sync confirmed; Wi-Fi disabled"
-                   : "FAILED: Wi-Fi disabled; retry at next wake");
-    guardTimer.start(3000); // One follow-up check, including devices with ForceWifiOn left enabled.
+    if (closeWifi)
+        status(success ? "DONE: full sync confirmed; Wi-Fi disabled"
+                       : "FAILED: Wi-Fi disabled; retry at next wake if no success today");
+    else
+        status(success ? "DONE: full sync confirmed; manual Wi-Fi unchanged until sleep"
+                       : "UNCONFIRMED: tracking ended; manual Wi-Fi unchanged; retry at next wake if no success today");
 }
 void DailySync::disableWifi() {
     if (!ready || usb || usbVisible(plug)) return;
@@ -293,24 +325,12 @@ void DailySync::disableWifi() {
     else if (wirelessUp(wireless)) wirelessOff(wireless);
 }
 void DailySync::wifiChanged(bool enabled) {
-    if (enabled && ready && managed() && !policy.active() && !usb) guardTimer.start(1500);
-}
-void DailySync::guardWifi() {
-    // Also guard built-in scheduled syncs that try to turn the radio on while asleep.
-    if (!managed() || !ready || usb || usbVisible(plug) || policy.active()) return;
-    // Nickel may auto-connect before our wake-delay expires. Let that pending attempt take over.
-    // Never restart after failure just because status/log files changed.
-    if (wakeTimer.isActive()) return;
-    // An unrelated native operation may already be using the network. Allow bounded cleanup.
-    if (isSyncing(syncManager)) {
-        policy.begin(); policy.launched(); policy.cancel();
-        deadline = QDateTime::currentDateTime().addSecs(15);
-        status("BLOCKING: sync outside the daily window");
-        workTimer.start();
-        cancelSync(syncManager);
-        return;
-    }
-    disableWifi();
+    if (!enabled && !policy.active()) { wifiPolicy.reset(); return; }
+    if (!enabled || !usable() || !managed() || policy.active()) return;
+    // An idle radio enable may be a book tap, browser or manual Wi-Fi switch.
+    // Do not guess which one it was and cancel Nickel's work.
+    wifiPolicy.allowManual();
+    status("WIFI_AVAILABLE: connection outside managed attempt left to Nickel until sleep");
 }
 
 extern "C" __attribute__((visibility("default"))) void daily_last_sync(void *self, QDateTime const &date) {

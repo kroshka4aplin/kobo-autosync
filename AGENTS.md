@@ -9,6 +9,15 @@ v0.1.1 logged a confirmed full sync and same-day skip on Forma; Wi-Fi shutdown
 was confirmed by the user. v0.1.2 manual permission and Wi-Fi shutdown were tested
 on Forma, but that attempt lacked the full-success timestamp and was logged
 UNCONFIRMED/FAILED despite no UI error. Keep this success-accounting limitation explicit.
+On 2026-10-19, v0.1.2 logs showed confirmed manual full syncs, but the user reported
+that immediate Wi-Fi shutdown blocked separate book downloads. v0.1.3 has partial
+Forma validation recorded in verification.json: native download-start notifications,
+network release and a full-sync timestamp were observed. Working book downloads
+were reported after a separate server-port fix during paused diagnostics; do not
+claim automatic-attempt download takeover or offline opening was verified. It removes the idle guard and releases
+network ownership for manual Wi-Fi/sync, pre-existing connections and native book
+download starts. Do not restore strict idle blocking or infer completed book files
+from a full sync timestamp. Keep manual network timeout handling non-destructive.
 Never describe a build or ABI check
 as a successful hardware test, or claim measured battery savings without measurements.
 

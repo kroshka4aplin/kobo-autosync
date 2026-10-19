@@ -3,7 +3,8 @@
 [Русская инструкция](docs/INSTALL.ru.md) · [Build from source](docs/BUILD.md) · [Changelog](CHANGELOG.md)
 
 A personal, experimental Nickel mod that requests a full Kobo sync at the first wake
-of each local calendar day, then turns Wi-Fi off. It uses the sync service already
+of each local calendar day, then turns Wi-Fi off if the mod opened the connection
+and no book download or manual request has taken over. It uses the sync service already
 configured on the reader, including an existing Autocaliweb setup.
 
 **Made for my own Kobo Forma. Development and device testing are limited to Kobo
@@ -12,7 +13,20 @@ This is an independent hobby project, with no affiliation with Rakuten Kobo.
 
 ## Current status
 
-**0.1.2-experimental is a prerelease.** Version 0.1.1 logged a confirmed full sync,
+**0.1.3-experimental has partial device validation on Forma.** It removes
+the idle Wi-Fi guard: manual Wi-Fi and native manual sync remain available until
+sleep. A native book-download start also hands network control back to Nickel,
+including during an automatic attempt. Tracking timeouts do not cancel user-owned
+work while awake. This addresses a reported 0.1.2 regression where sync succeeded
+but separate book downloads were blocked by the immediate Wi-Fi shutdown/guard.
+
+On 2026-10-19, Forma logs showed native download-start notifications, network
+release and a confirmed full-sync timestamp. The user reported working book
+downloads during paused diagnostics. **Downloads taking over an enabled automatic attempt, offline opening
+of the downloaded file, and complete sleep/USB/cancellation behavior remain
+unverified on hardware.** See `verification.json` for details.
+
+Version 0.1.1 logged a confirmed full sync,
 Wi-Fi shutdown and same-day automatic skips on a physical Forma; the user also
 confirmed Wi-Fi shutdown. Its strict network guard blocked native manual sync.
 Version 0.1.2 was tested with a native manual request after the daily quota: the
@@ -34,10 +48,13 @@ Battery savings have not been measured. Keep a backup before trying it.
 - Record success only after native start, full-sync success and completion signals.
   A failed or unconfirmed attempt is retried at the next wake if today's success
   has not already been recorded, with bounded connection/sync timeouts.
-- Turn Wi-Fi off afterward and block it outside a daily or explicit manual sync.
-  **The stock Kobo “Sync now” button works even after today's automatic sync.**
-  A manual attempt keeps its connection until completion or timeout, then turns Wi-Fi off.
-  Pause AutoSync for the browser, Wikipedia or other network features.
+- Turn Wi-Fi off after a managed attempt only if the mod opened the connection.
+  Pre-existing Wi-Fi, an explicit stock manual sync, or a native book-download start
+  hands the network to Nickel until sleep or manual Wi-Fi shutdown. The plugin
+  never turns a manually disabled radio back on just to finish a download.
+  **The stock “Sync now” button, book downloads, browser and Wikipedia are allowed.**
+  There is no idle Wi-Fi guard. While manually online, Nickel may run background
+  syncs; the daily limit applies to AutoSync's own scheduled requests.
 - Pause automation while storage is exported over USB. Work only in the stock Kobo
   interface (Nickel); KOReader and Kobalt networking is outside its scope.
 - Start every installation and update **paused**, so activation is an explicit step.
@@ -63,10 +80,12 @@ NickelMenu is optional; NickelDBus is not required.
 6. Disable Kobo's built-in daily automatic sync in its settings. Then choose
    **Daily Sync - resume** in NickelMenu, or delete only
    `.adds/daily-sync/paused` over USB and safely eject. Sleep and wake the reader.
-7. Let the attempt finish. Check that Wi-Fi is off and read
+7. Let the attempt finish. With no downloads/manual takeover and initially disabled
+   Wi-Fi, check that Wi-Fi is off and read
    `.adds/daily-sync/daily-sync.log`: expected success is
    `DONE: full sync confirmed; Wi-Fi disabled`, with today's date in `last-success.txt`.
    A `REQUESTING` or `START_RETURNED` line alone does not prove a sync occurred.
+   If a download takes over, expect `DOWNLOAD_STARTED` and Wi-Fi left to Nickel.
 
 Full Russian instructions, diagnostics and first-test checklist:
 [Установка и использование](docs/INSTALL.ru.md).
@@ -79,14 +98,16 @@ an existing `config.ini` unless you intend to reset its values.
 
 **Pause:** choose **Daily Sync - pause**, or create an empty
 `.adds/daily-sync/paused` file. Manual Wi-Fi is then available. If an attempt is
-active, it first completes/cancels and turns Wi-Fi off. Resume by removing `paused`.
+active, pausing also releases its Wi-Fi to Nickel. Resume by removing `paused`.
 **Manual sync:** use the stock Kobo sync button or **Daily Sync - sync now** in
 NickelMenu; today's automatic quota does not block an explicit request. A successful
-managed manual sync also satisfies today's daily quota. The plugin does not launch
+managed manual sync also satisfies today's daily quota. The stock button leaves
+Wi-Fi available afterwards for separate book downloads. The plugin does not launch
 a second sync when the stock button already owns the request.
 
 The NickelMenu command also works while AutoSync is paused: it runs one bounded
-attempt and turns Wi-Fi off afterward, keeping the scheduler paused. Without
+attempt, keeping the scheduler paused. It closes only Wi-Fi it opened and releases
+it if a download/manual request takes over. Without
 NickelMenu, create `.adds/daily-sync/sync-now` and eject. The stock Kobo button while
 paused keeps its normal behavior; the paused plugin does not manage its Wi-Fi.
 
@@ -110,8 +131,11 @@ MaxSyncSeconds=300
 
 Accepted ranges: wake delay 2–30 seconds, connection 15–180 seconds, running sync
 60–1800 seconds. The plugin also waits up to 20 seconds for sync-start confirmation
-and up to 15 seconds for cancellation. Increase the sync timeout for large downloads
-or pause automation to sync manually. Set the reader's date and time correctly.
+and up to 15 seconds for cancellation of its own work. A tracking timeout while the
+user owns the network stops monitoring without cancelling Nickel's work or marking
+success. Downloads are handed to Nickel until sleep, rather than cut off by that
+timeout. Sleep ends the manual network session while AutoSync is enabled; it is
+not a promise to keep downloads running during sleep. Set date/time correctly.
 
 `status.txt` shows the latest event. `daily-sync.log` has attempt details and one
 rotated backup. `last-success.txt` stores the local date/time of the last confirmed

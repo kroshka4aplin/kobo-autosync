@@ -2,6 +2,22 @@
 #pragma once
 #include <string>
 
+// A managed attempt may close only a connection it opened. User activity hands
+// the network back to Nickel for the rest of this awake session.
+struct WifiPolicy {
+    bool manualSession = false;
+    bool owned = false;
+    void begin(bool nativeManual, bool alreadyEnabled) {
+        if (nativeManual) allowManual();
+        owned = !manualSession && !alreadyEnabled;
+    }
+    void allowManual() { manualSession = true; owned = false; }
+    bool closeAfterAttempt() const { return owned && !manualSession; }
+    bool cancelNativeOnTimeout(bool awake) const { return !awake || closeAfterAttempt(); }
+    void finished() { owned = false; }
+    void reset() { manualSession = owned = false; }
+};
+
 // No Qt or device dependencies: the same policy is exercised by host tests.
 struct SyncPolicy {
     enum Phase { Idle, Connecting, Requested, Running, Draining, Cancelling };

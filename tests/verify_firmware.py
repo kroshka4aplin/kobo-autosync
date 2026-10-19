@@ -43,7 +43,7 @@ print(f'PASS: {len(hooks)} hook targets have ARM PLT relocations')
 
 expected = {
     'N3PowerWorkflowManager': {'resumedFromSleep', 'aboutToSleep'},
-    'SyncManagerBase': {'finished', 'cancelStarted', 'syncStarted'},
+    'SyncManagerBase': {'finished', 'cancelStarted', 'syncStarted', 'downloadStarted'},
     'WirelessManager': {'wifiEnabled', 'networkFailedToConnect'},
     'PlugWorkflowManager': {'aboutToConnect', 'aboutToUnplug', 'doneProcessing'},
 }
@@ -55,11 +55,12 @@ for class_name, required_signals in expected.items():
     for i in range(metadata[13]):
         name, argc, params, *_ = uints(data + 4 * (metadata[5] + 5 * i), 5)
         signals.add(qt_string(strings, name))
-        if class_name == 'SyncManagerBase' and qt_string(strings, name) == 'syncStarted':
+        if class_name == 'SyncManagerBase' and qt_string(strings, name) in {'syncStarted', 'downloadStarted'}:
             assert argc == 1
             parameter_type = uints(data + 4 * params, 2)[1]
             assert parameter_type & 0x80000000
-            assert qt_string(strings, parameter_type & 0x7fffffff) == 'SyncState::SyncType'
+            expected_type = 'SyncState::SyncType' if qt_string(strings, name) == 'syncStarted' else 'Volume'
+            assert qt_string(strings, parameter_type & 0x7fffffff) == expected_type
     assert required_signals <= signals, f'Missing signals for {class_name}: {required_signals - signals}'
     print(f'PASS: {class_name} signals ({len(required_signals)})')
 

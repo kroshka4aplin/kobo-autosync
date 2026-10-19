@@ -74,7 +74,8 @@ def main():
         'version': version,
         'target': 'Kobo Forma 377/380, firmware 4.38.23828',
         'initial_state': 'paused',
-        'physical_device_test': 'end_to_end_sync_not_confirmed_for_this_version',
+        'physical_device_test': json.loads((ROOT / 'verification.json').read_text()).get(
+            'current_version_device_test', 'end_to_end_sync_not_confirmed_for_this_version'),
         'battery_savings': 'not_measured',
         'packaging_checks': ['exact tar paths and payloads', 'regular files only', 'ZIP integrity'],
         'validation_reference': json.loads((ROOT / 'verification.json').read_text()),

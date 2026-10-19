@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.3-experimental — 2026-10-19
+
+- Remove the idle Wi-Fi guard, which blocked separate book downloads after a
+  successful full sync in 0.1.2. Daily quota checks no longer force Wi-Fi off.
+- Close only connections opened by a managed attempt. Preserve pre-existing Wi-Fi
+  and stock manual-sync connections until sleep or manual radio shutdown.
+- Release the network to Nickel on native `downloadStarted(Volume)`, including
+  when downloads start inside an automatic attempt. Continue conservative full-sync
+  success accounting; download activity is not itself proof of sync success.
+- Stop tracking at a deadline without cancelling user-owned work while awake.
+  Pausing an active attempt also hands its network to Nickel. Sleep still ends
+  managed network sessions with bounded cancellation; USB export resets tracking.
+
+Validation: host policy regressions, clean ARM build, packaging and exact-firmware
+signal/ABI verification. Partial Forma tests observed native download-start/network
+release messages and a confirmed full-sync timestamp. The user reported working
+downloads during paused diagnostics. Automatic-attempt download takeover, offline opening and complete
+sleep/USB/cancellation behavior remain unverified on hardware.
+
 ## 0.1.2-experimental — 2026-10-18
 
 - Allow native explicit manual sync via `fireManualSyncEvent`, even after today's

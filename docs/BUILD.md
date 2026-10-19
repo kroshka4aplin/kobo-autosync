@@ -18,6 +18,10 @@ g++ -std=c++11 -Wall -Wextra -Werror tests/policy_test.cc -o /tmp/kobo-policy-te
 These cover the date policy and success/failure/cancellation transitions, including
 the regression where a native entry returns without confirming that sync started.
 They do not simulate Qt/Nickel, physical Wi-Fi, sleep or USB storage.
+Network regressions also cover ownership across automatic sync, native manual
+sync, pre-existing Wi-Fi, download takeover, non-destructive tracking timeouts and
+sleep/USB resets. Firmware inspection checks the `downloadStarted(Volume)` signal;
+only a physical download test can confirm the complete content-transfer behavior.
 
 ## ARM plugin and installer
 

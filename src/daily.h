@@ -15,6 +15,7 @@ public slots:
     void observeFullSuccess();
     void observeFailure();
     void manualRequested();
+    void downloadStarted();
     void bootstrap();
     void woke();
     void sleeping();
@@ -28,7 +29,6 @@ public slots:
     void usbConnected();
     void usbDisconnected();
     void filesChanged();
-    void guardWifi();
 private:
     bool managed() const;
     bool usable() const;
@@ -39,12 +39,13 @@ private:
     void settle();
     void writeSuccess();
     SyncPolicy policy;
+    WifiPolicy wifiPolicy;
     QObject *syncManager = nullptr;
     QObject *wireless = nullptr;
     QObject *workflow = nullptr;
     QObject *power = nullptr;
     QObject *plug = nullptr;
-    QTimer wakeTimer, workTimer, guardTimer;
+    QTimer wakeTimer, workTimer;
     QFileSystemWatcher watcher;
     QDateTime deadline, drainUntil;
     QDateTime nextProgress;
