@@ -38,6 +38,7 @@ private:
     void beginCancel(const QString &reason);
     void settle();
     void writeSuccess();
+    void checkFullSyncStamp();
     SyncPolicy policy;
     WifiPolicy wifiPolicy;
     QObject *syncManager = nullptr;
@@ -49,6 +50,7 @@ private:
     QFileSystemWatcher watcher;
     QDateTime deadline, drainUntil;
     QDateTime nextProgress;
+    QDateTime baselineFullSync, requestedAt;
     bool awake = true;
     bool usb = false;
     bool forced = false;

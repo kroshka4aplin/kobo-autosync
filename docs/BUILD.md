@@ -17,9 +17,11 @@ g++ -std=c++11 -Wall -Wextra -Werror tests/policy_test.cc -o /tmp/kobo-policy-te
 
 These cover the date policy and success/failure/cancellation transitions, including
 the regression where a native entry returns without confirming that sync started.
-They do not simulate Qt/Nickel, physical Wi-Fi, sleep or USB storage.
+They also cover fresh versus stale native timestamps and success observed during
+bounded cleanup. They do not simulate Qt settings parsing/Nickel, physical Wi-Fi,
+sleep or USB storage.
 Network regressions also cover ownership across automatic sync, native manual
-sync, pre-existing Wi-Fi, download takeover, non-destructive tracking timeouts and
+sync, daily cleanup of pre-existing Wi-Fi, download takeover, non-destructive tracking timeouts and
 sleep/USB resets. Firmware inspection checks the `downloadStarted(Volume)` signal;
 only a physical download test can confirm the complete content-transfer behavior.
 
@@ -34,7 +36,9 @@ docker run --rm --network none --read-only --cap-drop ALL   --security-opt no-ne
 python3 package.py
 ```
 
-`dist/` contains the installer ZIP, source ZIP and `SHA256SUMS`. Packaging rejects
+`dist/` contains the minimal installer ZIP, source ZIP, build-info.json and `SHA256SUMS`.
+Publish only the installer ZIP as a release asset. GitHub provides source archives
+automatically; detailed verification remains in the repository/build outputs. Packaging rejects
 unexpected KoboRoot entries, verifies marker/library bytes and supplies project and
 NickelHook licenses. Source packaging uses an explicit file allowlist; local device
 files, build products and firmware are excluded. The installer starts paused.
@@ -63,10 +67,9 @@ A passing result is ABI evidence, not an end-to-end device test.
 1. Keep `VERSION`, runtime version text, `resources/installed`, changelog and test
    status consistent. Preserve all license notices.
 2. Run host tests, a clean ARM build, packaging and the reference ABI check when
-   changing native bindings. Inspect the installer manifest and `SHA256SUMS`.
+   changing native bindings. Inspect `build-info.json`, the installer contents and `SHA256SUMS`.
 3. Record actual physical tests, if any, without upgrading the status by inference.
-4. Create a prerelease tag matching `v$(cat VERSION)`, attach both ZIPs and
-   `SHA256SUMS`, and call out remaining hardware limitations in the release notes.
+4. Create a prerelease tag matching `v$(cat VERSION)`, attach only the minimal installer ZIP, include its SHA-256 in the release notes, and call out remaining hardware limitations in the release notes.
 
 CI performs the host tests, ARM build and packaging. It does not download firmware
 or run hardware tests. CI artifacts are experimental build outputs.

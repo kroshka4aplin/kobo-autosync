@@ -32,6 +32,12 @@ static void (*originalFailure)(QObject *);
 static void (*originalManualEvent)(QString const &, const char *, bool);
 
 static QString path(const char *name) { return QString::fromLatin1(ROOT) + name; }
+static QDateTime fullSyncStamp() {
+    // Read only: never set or sync account preferences. Nickel may persist its
+    // full-sync timestamp without passing through our intercepted PLT entry.
+    QSettings settings("/mnt/onboard/.kobo/Kobo/Kobo eReader.conf", QSettings::IniFormat);
+    return settings.value("ApplicationPreferences/LastSyncTime").toDateTime();
+}
 static QString readText(const QString &name) {
     QFile f(name);
     return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll()).trimmed() : QString();
@@ -111,7 +117,7 @@ void DailySync::bootstrap() {
     usb = usbVisible(plug);
     awake = !isSleeping(power);
     watcher.addPath(QString::fromLatin1(ROOT));
-    status("READY v0.1.3: daily sync; manual Wi-Fi and book downloads allowed until sleep");
+    status("READY v0.1.5: daily sync; native timestamp fallback; manual Wi-Fi and book downloads allowed until sleep");
     if (awake) woke();
 }
 void DailySync::woke() {
@@ -177,7 +183,7 @@ void DailySync::evaluate() {
     bool manual = forced;
     forced = false;
     policy.begin(manual ? SyncPolicy::MenuRequest : SyncPolicy::DailyWake);
-    wifiPolicy.begin(false, !airplane(workflow) || wirelessUp(wireless));
+    wifiPolicy.begin(false, !airplane(workflow) || wirelessUp(wireless), !manual);
     deadline = QDateTime::currentDateTime().addSecs(option("ConnectTimeoutSeconds", 60, 15, 180));
     nextProgress = QDateTime::currentDateTime().addSecs(10);
     status(manual ? "CONNECTING: explicit manual full sync requested"
@@ -196,6 +202,7 @@ void DailySync::drive() {
                .arg(deadline.toString(Qt::ISODate)));
     }
     if (policy.phase == SyncPolicy::Draining) {
+        checkFullSyncStamp();
         if (!isSyncing(syncManager) && now >= drainUntil) settle();
         else if (now >= deadline) beginCancel("cleanup deadline exceeded");
         return;
@@ -217,6 +224,8 @@ void DailySync::drive() {
     if (policy.phase == SyncPolicy::Connecting && isConnected(wireless) && !isSyncing(syncManager)) {
         // Always request our own full user sync. An incidental book sync on connection is insufficient.
         policy.launched();
+        baselineFullSync = fullSyncStamp();
+        requestedAt = now.toUTC();
         deadline = now.addSecs(20);
         nextProgress = now.addSecs(10);
         status("REQUESTING: invoking N3SyncManager::silentSync (same full-sync dispatch as native menu)");
@@ -236,6 +245,8 @@ void DailySync::manualRequested() {
     }
     if (!managed() || !policy.begin(SyncPolicy::NativeRequest)) return;
     wifiPolicy.begin(true, true);
+    baselineFullSync = fullSyncStamp();
+    requestedAt = QDateTime::currentDateTimeUtc();
     forced = false;
     wakeTimer.stop();
     deadline = QDateTime::currentDateTime().addSecs(option("ConnectTimeoutSeconds", 60, 15, 180));
@@ -270,8 +281,22 @@ void DailySync::observeFailure() {
         status("FAILURE_SIGNAL: native sync failed");
     }
 }
+void DailySync::checkFullSyncStamp() {
+    if (usb || !policy.nativeStarted || policy.fullSuccess ||
+        (policy.phase != SyncPolicy::Running && policy.phase != SyncPolicy::Draining)) return;
+    QDateTime stamp = fullSyncStamp();
+    // An old timestamp, a finished signal alone, or an incidental book sync is
+    // insufficient. Require a newly advanced native full-sync timestamp from
+    // this attempt, as well as the previously observed native start.
+    if (!requestedAt.isValid() || !stamp.isValid() ||
+        !SyncPolicy::freshFullStamp(baselineFullSync.isValid() ? baselineFullSync.toMSecsSinceEpoch() : 0,
+                                   stamp.toMSecsSinceEpoch(), requestedAt.toMSecsSinceEpoch())) return;
+    policy.success();
+    status("SUCCESS_TIMESTAMP: native full-sync time advanced during this attempt");
+}
 void DailySync::finished() {
     if (usb || (policy.phase != SyncPolicy::Requested && policy.phase != SyncPolicy::Running)) return;
+    checkFullSyncStamp();
     policy.finish();
     drainUntil = QDateTime::currentDateTime().addSecs(3);
     // Let Nickel finish its native cleanup before disabling the radio.
@@ -329,7 +354,7 @@ void DailySync::wifiChanged(bool enabled) {
     if (!enabled || !usable() || !managed() || policy.active()) return;
     // An idle radio enable may be a book tap, browser or manual Wi-Fi switch.
     // Do not guess which one it was and cancel Nickel's work.
-    wifiPolicy.allowManual();
+    wifiPolicy.allowExisting();
     status("WIFI_AVAILABLE: connection outside managed attempt left to Nickel until sleep");
 }
 
@@ -347,9 +372,9 @@ extern "C" __attribute__((visibility("default"))) void daily_manual_event(QStrin
 }
 static int init() {
     QStringList version = readText("/mnt/onboard/.kobo/version").split(',');
-    if (version.size() < 4 || version.at(2) != "4.38.23828" ||
+    if (version.isEmpty() ||
         !(version.last().endsWith("377") || version.last().endsWith("380"))) {
-        nh_log("INACTIVE: only Forma 377/380 firmware 4.38.23828 is allowed");
+        nh_log("INACTIVE: only Forma 377/380 is allowed");
         return 0;
     }
     if (!QCoreApplication::instance()) return 1;

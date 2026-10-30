@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include <string>
+#include <cstdint>
 
-// A managed attempt may close only a connection it opened. User activity hands
-// the network back to Nickel for the rest of this awake session.
+// Daily attempts may close an already enabled radio, but explicit sync/download
+// activity hands the network back to Nickel for the rest of this awake session.
 struct WifiPolicy {
     bool manualSession = false;
     bool owned = false;
-    void begin(bool nativeManual, bool alreadyEnabled) {
+    bool explicitSession = false;
+    void begin(bool nativeManual, bool alreadyEnabled, bool daily = false) {
         if (nativeManual) allowManual();
-        owned = !manualSession && !alreadyEnabled;
+        if (daily && !explicitSession) { manualSession = false; owned = true; }
+        else owned = !manualSession && !alreadyEnabled;
     }
-    void allowManual() { manualSession = true; owned = false; }
+    void allowExisting() { manualSession = true; owned = false; }
+    void allowManual() { explicitSession = true; allowExisting(); }
     bool closeAfterAttempt() const { return owned && !manualSession; }
     bool cancelNativeOnTimeout(bool awake) const { return !awake || closeAfterAttempt(); }
     void finished() { owned = false; }
-    void reset() { manualSession = owned = false; }
+    void reset() { manualSession = owned = explicitSession = false; }
 };
 
 // No Qt or device dependencies: the same policy is exercised by host tests.
@@ -27,6 +31,7 @@ struct SyncPolicy {
     bool fullSuccess = false;
     bool failed = false;
     bool completed = false;
+    bool nativeStarted = false;
 
     bool begin(Trigger source = DailyWake) {
         if (phase != Idle) return false;
@@ -34,11 +39,17 @@ struct SyncPolicy {
         // Nickel owns the connection and launch of a native manual request.
         phase = source == NativeRequest ? Requested : Connecting;
         fullSuccess = failed = completed = false;
+        nativeStarted = false;
         return true;
     }
     void launched() { phase = Requested; }
-    void started() { if (phase == Requested) phase = Running; }
-    void success() { if (phase == Running) fullSuccess = true; }
+    void started() { if (phase == Requested) { nativeStarted = true; phase = Running; } }
+    void success() {
+        if (nativeStarted && (phase == Running || phase == Draining)) {
+            fullSuccess = true;
+            if (phase == Draining) completed = !failed;
+        }
+    }
     void failure() { if (phase == Requested || phase == Running || phase == Cancelling) failed = true; }
     void cancel() { failed = true; phase = Cancelling; }
     void finish() {
@@ -47,6 +58,9 @@ struct SyncPolicy {
     }
     void reset() { phase = Idle; }
     bool active() const { return phase != Idle; }
+    static bool freshFullStamp(std::int64_t baseline, std::int64_t stamp, std::int64_t requested) {
+        return requested > 0 && stamp >= requested && stamp > baseline;
+    }
     static bool due(const std::string &today, const std::string &lastSuccess, bool force) {
         return force || today != lastSuccess;
     }

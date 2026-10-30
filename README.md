@@ -3,15 +3,31 @@
 [Русская инструкция](docs/INSTALL.ru.md) · [Build from source](docs/BUILD.md) · [Changelog](CHANGELOG.md)
 
 A personal, experimental Nickel mod that requests a full Kobo sync at the first wake
-of each local calendar day, then turns Wi-Fi off if the mod opened the connection
-and no book download or manual request has taken over. It uses the sync service already
+of each local calendar day, then turns Wi-Fi off after the automatic attempt unless a book download or
+explicit manual sync has taken over. Previously enabled Wi-Fi is also closed. It uses the sync service already
 configured on the reader, including an existing Autocaliweb setup.
 
 **Made for my own Kobo Forma. Development and device testing are limited to Kobo
-Forma on firmware 4.38.23828. Other models and firmware versions are unsupported.**
+Forma. The original tested reference is firmware 4.38.23828. Other models are unsupported. Version 0.1.4 removes
+the firmware-number gate at the owner's request; that does not establish
+compatibility with other firmware. A 0.1.4 test on Forma 4.38.23852 exposed missed success accounting; the owner reports 0.1.5 working on Forma 4.38.23852.**
 This is an independent hobby project, with no affiliation with Rakuten Kobo.
 
 ## Current status
+
+**0.1.5-experimental fixes missed native success accounting and changes automatic
+Wi-Fi cleanup.** In addition to the existing hook, it reads Kobo's native
+`LastSyncTime` without changing preferences. A newly advanced timestamp from this
+started attempt can confirm success, including during bounded cleanup. A stale
+timestamp or server-side success alone is insufficient. After an automatic
+attempt, pre-existing Wi-Fi is also closed unless explicit manual sync, a download
+or pause has handed the network to Nickel. No idle network guard is added.
+
+On 2026-10-30, 0.1.4 ran on Forma 4.38.23852 and logged `UNCONFIRMED` even though
+Kobo's native timestamp matched completion. The radio was retained as pre-existing
+Wi-Fi. Both reference and 4.38.23852 ABI inspection pass; **The owner reports 0.1.5 working after installation**; comprehensive hardware
+testing remains incomplete. Installs and updates remain paused. The firmware-number gate
+removed in 0.1.4 remains disabled; the Forma restriction remains.
 
 **0.1.3-experimental has partial device validation on Forma.** It removes
 the idle Wi-Fi guard: manual Wi-Fi and native manual sync remain available until
@@ -48,8 +64,8 @@ Battery savings have not been measured. Keep a backup before trying it.
 - Record success only after native start, full-sync success and completion signals.
   A failed or unconfirmed attempt is retried at the next wake if today's success
   has not already been recorded, with bounded connection/sync timeouts.
-- Turn Wi-Fi off after a managed attempt only if the mod opened the connection.
-  Pre-existing Wi-Fi, an explicit stock manual sync, or a native book-download start
+- Turn Wi-Fi off after an automatic attempt even if already enabled.
+  An explicit stock manual sync, pause, or a native book-download start
   hands the network to Nickel until sleep or manual Wi-Fi shutdown. The plugin
   never turns a manually disabled radio back on just to finish a download.
   **The stock “Sync now” button, book downloads, browser and Wikipedia are allowed.**
@@ -65,12 +81,16 @@ in a day. This is not a one-request-per-day limiter.
 
 ## Install
 
-Requirements: Kobo Forma (model IDs ending in 377 or 380), firmware **4.38.23828**,
-a saved Wi-Fi network and an already working native sync configuration.
+Requirements: Kobo Forma (model IDs ending in 377 or 380), a saved Wi-Fi network
+and an already working native sync configuration. Firmware **4.38.23828** is the
+tested reference; 0.1.4 does not block startup based on the firmware number.
 NickelMenu is optional; NickelDBus is not required.
 
 1. Download the **installer ZIP** from [Releases](https://github.com/kroshka4aplin/kobo-autosync/releases).
-   GitHub's automatic “Source code” archive is not an installer.
+   Choose `kobo-autosync-forma-v0.1.5-experimental.zip`. GitHub's automatic
+   “Source code” archives are for developers and cannot be installed.
+   The ZIP contains only the installation folders, required licenses and a short
+   bilingual `INSTALL.txt`. Detailed documentation and build metadata stay in the repository.
 2. Extract it on your computer, showing hidden files. Connect the Forma over USB.
 3. Merge the installer's `.adds` directory into the reader's root directory.
    Preserve your existing files, including `.adds/nm/doc` and other menu entries.
@@ -80,8 +100,7 @@ NickelMenu is optional; NickelDBus is not required.
 6. Disable Kobo's built-in daily automatic sync in its settings. Then choose
    **Daily Sync - resume** in NickelMenu, or delete only
    `.adds/daily-sync/paused` over USB and safely eject. Sleep and wake the reader.
-7. Let the attempt finish. With no downloads/manual takeover and initially disabled
-   Wi-Fi, check that Wi-Fi is off and read
+7. Let the attempt finish. With no downloads/manual takeover, check that Wi-Fi is off and read
    `.adds/daily-sync/daily-sync.log`: expected success is
    `DONE: full sync confirmed; Wi-Fi disabled`, with today's date in `last-success.txt`.
    A `REQUESTING` or `START_RETURNED` line alone does not prove a sync occurred.

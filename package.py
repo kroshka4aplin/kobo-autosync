@@ -16,7 +16,7 @@ SOURCE_FILES = (
     'docs/BUILD.md', 'docs/INSTALL.ru.md',
     'src/daily.cc', 'src/daily.h', 'src/policy.h',
     'tests/policy_test.cc', 'tests/verify_firmware.py',
-    'resources/config.ini', 'resources/installed', 'resources/paused', 'resources/nickelmenu',
+    'resources/INSTALL.txt', 'resources/config.ini', 'resources/installed', 'resources/paused', 'resources/nickelmenu',
     'vendor/NickelHook/NickelHook.mk', 'vendor/NickelHook/NickelHook.h',
     'vendor/NickelHook/nh.c', 'vendor/NickelHook/nhplugin.h',
     'vendor/NickelHook/README.md', 'vendor/NickelHook/LICENSE', 'vendor/NickelHook/.gitignore',
@@ -60,19 +60,17 @@ def main():
         '.adds/daily-sync/config.ini': (ROOT / 'resources/config.ini').read_bytes(),
         '.adds/daily-sync/paused': (ROOT / 'resources/paused').read_bytes(),
         '.adds/nm/daily-sync': (ROOT / 'resources/nickelmenu').read_bytes(),
-        'README.md': (ROOT / 'README.md').read_bytes(),
-        'docs/INSTALL.ru.md': (ROOT / 'docs/INSTALL.ru.md').read_bytes(),
-        'LICENSE': (ROOT / 'LICENSE').read_bytes(),
-        'THIRD_PARTY_NOTICES.md': (ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes(),
-        'NickelHook-LICENSE.txt': (ROOT / 'vendor/NickelHook/LICENSE').read_bytes(),
+        'INSTALL.txt': (ROOT / 'resources/INSTALL.txt').read_bytes(),
+        '.adds/daily-sync/LICENSES.txt': (
+            'Kobo AutoSync — MIT license\n\n' + (ROOT / 'LICENSE').read_text() +
+            '\nNickelHook — https://github.com/pgaskin/NickelHook\n' +
+            'Vendored commit: bcd90ba94d90d22562fb64ef2920ed3323c1dae5\n\n' +
+            (ROOT / 'vendor/NickelHook/LICENSE').read_text()
+        ).encode(),
     }
-    # Include linked documentation and the original license at its source path.
-    for name in SOURCE_FILES:
-        if name.endswith('.md') or name == 'vendor/NickelHook/LICENSE':
-            entries.setdefault(name, (ROOT / name).read_bytes())
     manifest = {
         'version': version,
-        'target': 'Kobo Forma 377/380, firmware 4.38.23828',
+        'target': 'Kobo Forma 377/380; no firmware version gate; reference ABI 4.38.23828',
         'initial_state': 'paused',
         'physical_device_test': json.loads((ROOT / 'verification.json').read_text()).get(
             'current_version_device_test', 'end_to_end_sync_not_confirmed_for_this_version'),
@@ -81,10 +79,12 @@ def main():
         'validation_reference': json.loads((ROOT / 'verification.json').read_text()),
         'sha256': {name: hashlib.sha256(data).hexdigest() for name, data in entries.items()},
     }
-    entries['build-info.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
+    # Detailed verification stays with source/build outputs, not on the reader.
+    build_info = (json.dumps(manifest, indent=2) + '\n').encode()
     dist = ROOT / 'dist'
     dist.mkdir(exist_ok=True)
-    installer = dist / f'kobo-autosync-forma-4.38.23828-v{version}.zip'
+    (dist / 'build-info.json').write_bytes(build_info)
+    installer = dist / f'kobo-autosync-forma-v{version}.zip'
     source = dist / f'kobo-autosync-source-v{version}.zip'
     write_zip(installer, entries)
     write_zip(source, {f'kobo-autosync/{name}': (ROOT / name).read_bytes() for name in SOURCE_FILES})

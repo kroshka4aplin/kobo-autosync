@@ -8,7 +8,7 @@
 - License: MIT; complete original text: [vendor/NickelHook/LICENSE](vendor/NickelHook/LICENSE).
 
 NickelHook source is included under `vendor/NickelHook` and compiled into the plugin.
-Its license is also shipped as `NickelHook-LICENSE.txt` in each installer. Generated
+Its complete license is also included in `.adds/daily-sync/LICENSES.txt` in each installer. Generated
 objects, MOC output and plugin metadata are build products, not upstream modifications.
 The top-level MIT license does not replace this upstream copyright notice.
 

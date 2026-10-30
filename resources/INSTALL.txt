@@ -1,0 +1,45 @@
+Kobo AutoSync 0.1.5-experimental — Kobo Forma 377/380
+
+УСТАНОВКА
+1. Распакуйте ZIP на компьютере. Включите показ скрытых файлов.
+2. Подключите Kobo по USB и подтвердите подключение на экране.
+3. Скопируйте папки .adds и .kobo из архива в корень накопителя Kobo.
+   Объединяйте папки, сохраняйте чужие файлы. NickelMenu необязателен;
+   файл .adds/nm/daily-sync добавляет пункты только при установленном NickelMenu.
+4. Безопасно извлеките накопитель и отключите USB. Дождитесь установки и перезагрузки.
+5. Отключите штатную ежедневную автосинхронизацию Kobo.
+6. Выберите Daily Sync - resume в NickelMenu. Без NickelMenu подключите USB
+   ещё раз, удалите только .adds/daily-sync/paused и безопасно отключите книгу.
+7. Усыпите и разбудите Kobo. Дождитесь завершения обмена.
+
+ОБНОВЛЕНИЕ
+Скопируйте только .kobo/KoboRoot.tgz в папку .kobo книги, чтобы сохранить свой
+config.ini. После установки мод снова на паузе: включите его, как в пункте 6.
+
+Мод синхронизирует при первом пробуждении за день. После автоматической попытки
+Wi-Fi выключается, даже если был включён заранее. Ручная синхронизация и начало
+загрузки книги сохраняют сеть до сна. Статус: .adds/daily-sync/status.txt.
+Удаление: создайте пустой .adds/daily-sync/uninstall и перезагрузите Kobo.
+
+Личный эксперимент, испытания только на Kobo Forma. Эталонная прошивка 4.38.23828;
+для 0.1.5 пользователь сообщил об успешной работе на 4.38.23852. Другие модели
+не поддерживаются. Экономия батареи не измерялась. Перед установкой сохраните бэкап.
+Проект и полная инструкция: https://github.com/kroshka4aplin/kobo-autosync
+Лицензии: .adds/daily-sync/LICENSES.txt
+
+INSTALLATION (ENGLISH)
+1. Extract this ZIP on your computer and show hidden files.
+2. Connect the Kobo over USB and confirm the connection on its screen.
+3. Merge .adds and .kobo into the reader's root. Preserve unrelated files.
+   NickelMenu is optional and is not included.
+4. Safely eject, disconnect and wait for installation and reboot.
+5. Disable Kobo's built-in daily auto-sync.
+6. Select Daily Sync - resume in NickelMenu, or reconnect over USB, delete only
+   .adds/daily-sync/paused and safely eject. Sleep and wake to start an attempt.
+UPDATES: copy only .kobo/KoboRoot.tgz to preserve config.ini. Resume after reboot.
+Automatic attempts turn Wi-Fi off unless manual sync or a book download takes
+control until sleep. Status: .adds/daily-sync/status.txt.
+Uninstall: create an empty .adds/daily-sync/uninstall and reboot.
+Personal experimental mod, tested only on Forma. Reference firmware: 4.38.23828;
+the owner reports 0.1.5 working on 4.38.23852. Battery savings are not measured.
+Make a backup. Full instructions and source: https://github.com/kroshka4aplin/kobo-autosync

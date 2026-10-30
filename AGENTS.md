@@ -2,9 +2,12 @@
 
 ## Scope and status
 
-This is a personal experimental mod for Kobo Forma 377/380, firmware 4.38.23828.
-Do not widen the model/firmware allowlist without ABI evidence and a recorded device
-test. Keep release and documentation claims consistent with `verification.json`:
+This is a personal experimental mod for Kobo Forma 377/380, with firmware
+4.38.23828 as the tested reference. On 2026-10-30 the owner explicitly requested
+removal of the firmware-number gate for v0.1.4. Preserve that decision; do not
+restore exact firmware-number blocking. The Forma model restriction remains.
+Do not claim compatibility with another firmware without ABI evidence and a
+recorded device test. Keep claims consistent with `verification.json`:
 v0.1.1 logged a confirmed full sync and same-day skip on Forma; Wi-Fi shutdown
 was confirmed by the user. v0.1.2 manual permission and Wi-Fi shutdown were tested
 on Forma, but that attempt lacked the full-success timestamp and was logged
@@ -39,6 +42,11 @@ Never write `/mnt/onboard` while it is exported over USB. Do not alter account
 configuration, book databases, bootloader, kernel or system startup scripts.
 Do not infer success from a native call returning, connection alone, or an incidental
 book sync. Preserve explicit native-start and full-sync success confirmation.
+Version 0.1.5 additionally observes advancement of the native LastSyncTime via
+read-only preferences; require a native start and a fresh timestamp from this
+attempt, never stale settings or server-only success. Automatic attempts may now
+close pre-existing Wi-Fi at the owner's request, but explicit manual sync, pause
+and download takeover remain protected until sleep. Keep this distinction tested.
 Keep new installs and updates paused. Do not overwrite other NickelMenu files.
 
 Do not commit reader backups, firmware, private logs, credentials, server URLs,

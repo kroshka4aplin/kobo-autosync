@@ -3,11 +3,30 @@
 #include <cassert>
 #include <iostream>
 int main() {
+    // Fresh settings alone must not revive an old success, even if an earlier
+    // date was absent, the clock moved backwards, or the value stayed unchanged.
+    assert(SyncPolicy::freshFullStamp(1000, 3000, 2000));
+    assert(SyncPolicy::freshFullStamp(0, 3000, 2000));
+    assert(!SyncPolicy::freshFullStamp(1000, 1000, 2000));
+    assert(!SyncPolicy::freshFullStamp(0, 1000, 2000));
+    assert(!SyncPolicy::freshFullStamp(4000, 3000, 2000));
+    assert(!SyncPolicy::freshFullStamp(0, 0, 2000));
+    assert(!SyncPolicy::freshFullStamp(0, 3000, 0));
     assert(SyncPolicy::due("2026-10-18", "", false));
     assert(!SyncPolicy::due("2026-10-18", "2026-10-18", false));
     assert(SyncPolicy::due("2026-10-19", "2026-10-18", false));
     assert(SyncPolicy::due("2026-10-18", "2026-10-18", true));
     SyncPolicy p;
+    // Native settings can become visible after finished(), during bounded
+    // cleanup. They count only for an attempt whose native start was observed.
+    assert(p.begin()); p.launched(); p.started(); p.finish();
+    assert(!p.completed); p.success(); assert(p.completed); p.reset();
+    assert(p.begin()); p.launched(); p.finish(); p.success();
+    assert(!p.completed); p.reset();
+    assert(p.begin()); p.launched(); p.started(); p.failure(); p.finish(); p.success();
+    assert(!p.completed); p.reset();
+    assert(p.begin()); p.launched(); p.started(); p.cancel(); p.success(); p.finish();
+    assert(!p.completed); p.reset();
     assert(p.begin()); assert(!p.begin());
     p.success(); // A background success during Wi-Fi setup is not our full sync.
     p.failure(); // Neither is an unrelated connection-time failure.
@@ -79,6 +98,17 @@ int main() {
     // event (for example, it was enabled before the plugin initialized).
     net.reset(); net.begin(false, true);
     assert(!net.closeAfterAttempt());
+    // A radio enable before the daily attempt no longer grants permanent manual
+    // ownership. Daily cleanup must close it even if Nickel connected first.
+    net.allowExisting(); net.begin(false, true, true);
+    assert(net.closeAfterAttempt());
+    net.finished();
+    // Explicit native sync/download handoff still wins over the daily policy.
+    net.allowManual(); net.begin(false, true, true);
+    assert(!net.closeAfterAttempt());
+    assert(!net.cancelNativeOnTimeout(true));
+    net.reset(); net.begin(false, true, true);
+    assert(net.closeAfterAttempt());
     // Sleep/USB resets permission: next daily attempt may own a fresh connection.
     net.allowManual(); net.reset(); net.begin(false, false);
     assert(net.closeAfterAttempt());

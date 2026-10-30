@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.5-experimental — 2026-10-30
+
+- Confirm a started full-sync attempt using an advanced native LastSyncTime as a
+  read-only fallback when the PLT hook is missed; allow confirmation during bounded
+  cleanup. Old timestamps, completion alone and server responses do not count.
+- Close pre-existing Wi-Fi after automatic attempts, at the owner's request.
+  Explicit manual sync, pause and download takeover still retain the network.
+  No idle network guard is restored.
+- Keep updates paused and the firmware-number gate disabled.
+- Provide a minimal installer ZIP: installation folders, required licenses and a
+  short bilingual INSTALL.txt. Keep developer documentation and build metadata
+  out of the installer; publish one downloadable installer asset.
+
+Validation: host regressions, clean ARM build, packaging and ABI inspection for
+4.38.23828 and 4.38.23852. The owner reported 0.1.5 working on Forma 4.38.23852; comprehensive hardware testing remains incomplete. On 0.1.4,
+Forma 4.38.23852 logged UNCONFIRMED while its native full-sync timestamp matched
+the completion time; this is diagnostic evidence, not a test of the fix.
+
+## 0.1.4-experimental — 2026-10-30
+
+- Remove the exact firmware-number startup gate at the owner's explicit request.
+  Keep the Forma 377/380 model restriction and required native ABI bindings.
+- Keep manual Wi-Fi/download handoff, USB handling, bounded timers, full-sync
+  confirmation and paused installation/update behavior unchanged.
+- Name the installer without a firmware number; retain 4.38.23828 as the ABI
+  reference. This build and Forma firmware 4.38.23852 are not yet device-verified.
+
 ## 0.1.3-experimental — 2026-10-19
 
 - Remove the idle Wi-Fi guard, which blocked separate book downloads after a
