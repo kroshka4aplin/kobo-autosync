@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.6-experimental — 2026-10-30
+
+- Package licenses without a document extension and instructions as INSTALL.md;
+  migrate the old module-owned LICENSES.txt too.
+- Use status.log and last-success.dat so diagnostic/state files do not have
+  book extensions. Migrate legacy .txt files automatically outside USB export,
+  even while paused, preserving the newer valid success date.
+- Keep the old success date usable if a move fails; do not reset the daily quota.
+- Guard status-file writes during USB export, including bootstrap diagnostics.
+- Do not edit Nickel's library database. Existing imported entries may remain
+  until a native rescan or removal through the normal reader UI.
+
+Validation: host policy and storage regressions (USB exclusion, repeated migration,
+conflicting dates, malformed state and failed writes/moves), clean ARM build and
+minimal installer packaging.
+Native ABI bindings are unchanged. Hardware migration/rescan testing is pending.
+
 ## 0.1.5-experimental — 2026-10-30
 
 - Confirm a started full-sync attempt using an advanced native LastSyncTime as a

@@ -15,6 +15,16 @@ This is an independent hobby project, with no affiliation with Rakuten Kobo.
 
 ## Current status
 
+**0.1.6-experimental prevents service files from being imported as books.**
+Status is now `status.log` and the confirmed date is `last-success.dat`.
+Legacy `.txt` files are migrated automatically, including while paused, only
+when USB storage is not exported. The newer valid success date is retained;
+a failed move does not discard the legacy daily quota. No account or library
+database is edited. Already imported library entries may remain until Nickel
+rescans missing files; remove a lingering entry through the normal reader UI.
+This migration has not yet been tested on hardware.
+
+
 **0.1.5-experimental fixes missed native success accounting and changes automatic
 Wi-Fi cleanup.** In addition to the existing hook, it reads Kobo's native
 `LastSyncTime` without changing preferences. A newly advanced timestamp from this
@@ -87,10 +97,10 @@ tested reference; 0.1.4 does not block startup based on the firmware number.
 NickelMenu is optional; NickelDBus is not required.
 
 1. Download the **installer ZIP** from [Releases](https://github.com/kroshka4aplin/kobo-autosync/releases).
-   Choose `kobo-autosync-forma-v0.1.5-experimental.zip`. GitHub's automatic
+   Choose `kobo-autosync-forma-v0.1.6-experimental.zip`. GitHub's automatic
    “Source code” archives are for developers and cannot be installed.
    The ZIP contains only the installation folders, required licenses and a short
-   bilingual `INSTALL.txt`. Detailed documentation and build metadata stay in the repository.
+   bilingual `INSTALL.md`. Detailed documentation and build metadata stay in the repository.
 2. Extract it on your computer, showing hidden files. Connect the Forma over USB.
 3. Merge the installer's `.adds` directory into the reader's root directory.
    Preserve your existing files, including `.adds/nm/doc` and other menu entries.
@@ -102,7 +112,7 @@ NickelMenu is optional; NickelDBus is not required.
    `.adds/daily-sync/paused` over USB and safely eject. Sleep and wake the reader.
 7. Let the attempt finish. With no downloads/manual takeover, check that Wi-Fi is off and read
    `.adds/daily-sync/daily-sync.log`: expected success is
-   `DONE: full sync confirmed; Wi-Fi disabled`, with today's date in `last-success.txt`.
+   `DONE: full sync confirmed; Wi-Fi disabled`, with today's date in `last-success.dat`.
    A `REQUESTING` or `START_RETURNED` line alone does not prove a sync occurred.
    If a download takes over, expect `DOWNLOAD_STARTED` and Wi-Fi left to Nickel.
 
@@ -156,8 +166,8 @@ success. Downloads are handed to Nickel until sleep, rather than cut off by that
 timeout. Sleep ends the manual network session while AutoSync is enabled; it is
 not a promise to keep downloads running during sleep. Set date/time correctly.
 
-`status.txt` shows the latest event. `daily-sync.log` has attempt details and one
-rotated backup. `last-success.txt` stores the local date/time of the last confirmed
+`status.log` shows the latest event. `daily-sync.log` has attempt details and one
+rotated backup. `last-success.dat` stores the local date/time of the last confirmed
 success. Inspect device logs alongside server logs when testing. USB connection
 stops automation timers, so the last line before USB export can be an intermediate state.
 

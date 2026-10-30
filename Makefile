@@ -13,7 +13,7 @@ include vendor/NickelHook/NickelHook.mk
 koboroot: $(LIBRARY)
 # NickelHook passes all prerequisites to this helper; compile source files only.
 override nh_cmd_cc = $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(filter %.cc %.cpp,$(2)) -o $(1)
-src/daily.o: src/daily.h src/policy.h
+src/daily.o: src/daily.h src/policy.h src/storage.h
 $(OBJECTS_C) $(OBJECTS_CXX) $(OBJECTS_CXX1) $(OBJECTS_MOC): VERSION
 override nh_cmd_c = $(CC) $(CPPFLAGS) $(CFLAGS) -c $(filter %.c,$(2)) -o $(1)
 override nh_cmd_moco = $(CXX) -xc++ $(CPPFLAGS) $(CXXFLAGS) -c $(filter %.moc,$(2)) -o $(1)

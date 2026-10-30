@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "daily.h"
+#include "storage.h"
 #include <NickelHook.h>
 #include <QCoreApplication>
 #include <QFile>
@@ -76,7 +77,8 @@ bool DailySync::usable() const {
 void DailySync::status(const QString &message) {
     QString entry = QDateTime::currentDateTime().toString(Qt::ISODate) + " " + message;
     nh_log("%s", qPrintable(message));
-    writeText(path("status.txt"), entry);
+    if (!plug || usb || usbVisible(plug)) return;
+    writeText(path("status.log"), entry);
     QFile f(path("daily-sync.log"));
     if (f.size() > 65536) {
         QFile::remove(path("daily-sync.log.1"));
@@ -84,6 +86,25 @@ void DailySync::status(const QString &message) {
         f.setFileName(path("daily-sync.log"));
     }
     if (f.open(QIODevice::WriteOnly | QIODevice::Append)) f.write((entry + "\n").toUtf8());
+}
+
+namespace {
+struct LegacyStorage {
+    bool exists(const char *name) const { return QFileInfo(path(name)).exists(); }
+    QString read(const char *name) const { return readText(path(name)); }
+    qint64 timestamp(const QString &value) const {
+        const QDateTime date = QDateTime::fromString(value, Qt::ISODate);
+        return date.isValid() ? date.toMSecsSinceEpoch() : -1;
+    }
+    bool write(const char *name, const QString &value) const { return writeText(path(name), value); }
+    void remove(const char *name) const { QFile::remove(path(name)); }
+    void move(const char *from, const char *to) const { QFile::rename(path(from), path(to)); }
+};
+}
+void DailySync::migrateLegacyFiles() {
+    LegacyStorage storage;
+    // Also migrate while paused, but never touch the exported filesystem.
+    migrateLegacyState(storage, ready && !usb && !usbVisible(plug));
 }
 
 void DailySync::bootstrap() {
@@ -116,8 +137,9 @@ void DailySync::bootstrap() {
     wasManaged = managed();
     usb = usbVisible(plug);
     awake = !isSleeping(power);
-    watcher.addPath(QString::fromLatin1(ROOT));
-    status("READY v0.1.5: daily sync; native timestamp fallback; manual Wi-Fi and book downloads allowed until sleep");
+    if (!usb) watcher.addPath(QString::fromLatin1(ROOT));
+    migrateLegacyFiles();
+    status("READY v0.1.6: daily sync; non-book state files; manual Wi-Fi and book downloads allowed until sleep");
     if (awake) woke();
 }
 void DailySync::woke() {
@@ -146,6 +168,7 @@ void DailySync::usbConnected() {
 }
 void DailySync::usbDisconnected() {
     usb = false;
+    migrateLegacyFiles();
     if (awake) woke();
 }
 void DailySync::filesChanged() {
@@ -164,6 +187,7 @@ void DailySync::filesChanged() {
 }
 void DailySync::evaluate() {
     if (!usable()) return;
+    migrateLegacyFiles();
     if (!watcher.directories().contains(QString::fromLatin1(ROOT))) watcher.addPath(QString::fromLatin1(ROOT));
     if (policy.active()) return;
     // Requests copied over USB cannot generate an inotify event while the disk is exported.
@@ -175,7 +199,9 @@ void DailySync::evaluate() {
     if (!managed() && !forced) return;
     QDate today = QDate::currentDate();
     if (today.year() < 2024) { status("SKIPPED: device clock is not set"); return; }
-    QString last = readText(path("last-success.txt")).left(10);
+    QString last = readText(path("last-success.dat")).left(10);
+    // A failed rename must not discard today's quota and trigger an extra sync.
+    if (last.isEmpty()) last = readText(path("last-success.txt")).left(10);
     if (!SyncPolicy::due(today.toString(Qt::ISODate).toStdString(), last.toStdString(), forced)) {
         status("ALREADY_DONE: automatic sync skipped; manual Wi-Fi unchanged");
         return;
@@ -326,7 +352,7 @@ void DailySync::beginCancel(const QString &reason) {
 }
 void DailySync::writeSuccess() {
     QString stamp = QDateTime::currentDateTime().toString(Qt::ISODate);
-    if (!writeText(path("last-success.txt"), stamp)) status("ERROR: unable to persist success date");
+    if (!writeText(path("last-success.dat"), stamp)) status("ERROR: unable to persist success date");
 }
 void DailySync::settle() {
     bool success = policy.completed;

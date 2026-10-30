@@ -14,8 +14,8 @@ SOURCE_FILES = (
     'AGENTS.md', 'CONTRIBUTING.md', 'SECURITY.md', 'VERSION', 'Makefile',
     'package.py', 'verification.json', '.gitignore', '.gitattributes', '.editorconfig',
     'docs/BUILD.md', 'docs/INSTALL.ru.md',
-    'src/daily.cc', 'src/daily.h', 'src/policy.h',
-    'tests/policy_test.cc', 'tests/verify_firmware.py',
+    'src/daily.cc', 'src/daily.h', 'src/policy.h', 'src/storage.h',
+    'tests/policy_test.cc', 'tests/storage_test.cc', 'tests/verify_firmware.py',
     'resources/INSTALL.txt', 'resources/config.ini', 'resources/installed', 'resources/paused', 'resources/nickelmenu',
     'vendor/NickelHook/NickelHook.mk', 'vendor/NickelHook/NickelHook.h',
     'vendor/NickelHook/nh.c', 'vendor/NickelHook/nhplugin.h',
@@ -60,8 +60,8 @@ def main():
         '.adds/daily-sync/config.ini': (ROOT / 'resources/config.ini').read_bytes(),
         '.adds/daily-sync/paused': (ROOT / 'resources/paused').read_bytes(),
         '.adds/nm/daily-sync': (ROOT / 'resources/nickelmenu').read_bytes(),
-        'INSTALL.txt': (ROOT / 'resources/INSTALL.txt').read_bytes(),
-        '.adds/daily-sync/LICENSES.txt': (
+        'INSTALL.md': (ROOT / 'resources/INSTALL.txt').read_bytes(),
+        '.adds/daily-sync/LICENSES': (
             'Kobo AutoSync — MIT license\n\n' + (ROOT / 'LICENSE').read_text() +
             '\nNickelHook — https://github.com/pgaskin/NickelHook\n' +
             'Vendored commit: bcd90ba94d90d22562fb64ef2920ed3323c1dae5\n\n' +

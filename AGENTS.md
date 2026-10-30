@@ -28,6 +28,7 @@ as a successful hardware test, or claim measured battery savings without measure
 
 - `src/daily.cc`, `src/daily.h`: Qt controller, native ABI bindings and NickelHook hooks.
 - `src/policy.h`: pure state machine; `tests/policy_test.cc`: host regression scenarios.
+- `src/storage.h`, `tests/storage_test.cc`: legacy state migration and host failure/USB regressions.
 - `tests/verify_firmware.py`: read-only ELF/Qt ABI inspection; requires external firmware.
 - `resources/`: default configuration, paused/install markers and optional NickelMenu file.
 - `vendor/NickelHook/`: pinned upstream source; retain its MIT license and notices.
@@ -47,6 +48,9 @@ read-only preferences; require a native start and a fresh timestamp from this
 attempt, never stale settings or server-only success. Automatic attempts may now
 close pre-existing Wi-Fi at the owner's request, but explicit manual sync, pause
 and download takeover remain protected until sleep. Keep this distinction tested.
+Use status.log and last-success.dat; never recreate legacy .txt state files.
+Migrate old state outside USB export, preserving the newer valid success date
+and retaining legacy data if persistence fails. Do not delete library database rows.
 Keep new installs and updates paused. Do not overwrite other NickelMenu files.
 
 Do not commit reader backups, firmware, private logs, credentials, server URLs,

@@ -39,6 +39,7 @@ private:
     void settle();
     void writeSuccess();
     void checkFullSyncStamp();
+    void migrateLegacyFiles();
     SyncPolicy policy;
     WifiPolicy wifiPolicy;
     QObject *syncManager = nullptr;

@@ -13,6 +13,8 @@ export NICKELTC_IMAGE=ghcr.io/pgaskin/nickeltc@sha256:3296eb400d270cfd26f5773ab0
 ```sh
 g++ -std=c++11 -Wall -Wextra -Werror tests/policy_test.cc -o /tmp/kobo-policy-test
 /tmp/kobo-policy-test
+g++ -std=c++11 -Wall -Wextra -Werror tests/storage_test.cc -o /tmp/kobo-storage-test
+/tmp/kobo-storage-test
 ```
 
 These cover the date policy and success/failure/cancellation transitions, including
@@ -24,6 +26,10 @@ Network regressions also cover ownership across automatic sync, native manual
 sync, daily cleanup of pre-existing Wi-Fi, download takeover, non-destructive tracking timeouts and
 sleep/USB resets. Firmware inspection checks the `downloadStarted(Volume)` signal;
 only a physical download test can confirm the complete content-transfer behavior.
+
+Storage regressions cover legacy migration, conflicting success dates, malformed
+state, failed writes/moves, repeated migration and no writes during USB export.
+They exercise the migration algorithm with a fake store, not Qt filesystem I/O.
 
 ## ARM plugin and installer
 

@@ -1,4 +1,4 @@
-Kobo AutoSync 0.1.5-experimental — Kobo Forma 377/380
+Kobo AutoSync 0.1.6-experimental — Kobo Forma 377/380
 
 УСТАНОВКА
 1. Распакуйте ZIP на компьютере. Включите показ скрытых файлов.
@@ -18,14 +18,14 @@ config.ini. После установки мод снова на паузе: в�
 
 Мод синхронизирует при первом пробуждении за день. После автоматической попытки
 Wi-Fi выключается, даже если был включён заранее. Ручная синхронизация и начало
-загрузки книги сохраняют сеть до сна. Статус: .adds/daily-sync/status.txt.
+загрузки книги сохраняют сеть до сна. Статус: .adds/daily-sync/status.log.
 Удаление: создайте пустой .adds/daily-sync/uninstall и перезагрузите Kobo.
 
 Личный эксперимент, испытания только на Kobo Forma. Эталонная прошивка 4.38.23828;
 для 0.1.5 пользователь сообщил об успешной работе на 4.38.23852. Другие модели
 не поддерживаются. Экономия батареи не измерялась. Перед установкой сохраните бэкап.
 Проект и полная инструкция: https://github.com/kroshka4aplin/kobo-autosync
-Лицензии: .adds/daily-sync/LICENSES.txt
+Лицензии: .adds/daily-sync/LICENSES
 
 INSTALLATION (ENGLISH)
 1. Extract this ZIP on your computer and show hidden files.
@@ -38,7 +38,7 @@ INSTALLATION (ENGLISH)
    .adds/daily-sync/paused and safely eject. Sleep and wake to start an attempt.
 UPDATES: copy only .kobo/KoboRoot.tgz to preserve config.ini. Resume after reboot.
 Automatic attempts turn Wi-Fi off unless manual sync or a book download takes
-control until sleep. Status: .adds/daily-sync/status.txt.
+control until sleep. Status: .adds/daily-sync/status.log.
 Uninstall: create an empty .adds/daily-sync/uninstall and reboot.
 Personal experimental mod, tested only on Forma. Reference firmware: 4.38.23828;
 the owner reports 0.1.5 working on 4.38.23852. Battery savings are not measured.

@@ -22,6 +22,8 @@ jobs:
         run: |
           g++ -std=c++11 -Wall -Wextra -Werror tests/policy_test.cc -o /tmp/kobo-policy-test
           /tmp/kobo-policy-test
+          g++ -std=c++11 -Wall -Wextra -Werror tests/storage_test.cc -o /tmp/kobo-storage-test
+          /tmp/kobo-storage-test
       - name: Pull pinned NickelTC toolchain
         run: docker pull "$NICKELTC_IMAGE"
       - name: Clean ARM build
